@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>情感分析+书籍推荐</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <style>
+    body {max-width: 900px; margin: 40px auto; padding: 0 20px; font-family: Arial}
+    textarea {width:100%; height:140px; padding:10px; font-size:16px; margin:10px 0}
+    button {padding:10px 30px; background:#2395ff; color:white; border:none; border-radius:4px; cursor:pointer}
+    .result {margin:20px 0; font-size:18px}
+    .book {padding:10px; border-bottom:1px solid #eee}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h2>小说评论情感分析</h2>
+    <textarea v-model="text" placeholder="输入评论..."></textarea>
+    <button @click="analyze">分析情感 + 显示同类书籍</button>
+
+    <div class="result" v-if="emotion">
+      <p>情感：@{{ emotion }}</p>
+      <p>推荐标签：@{{ bookTag }}</p>
+      <h3>同类书籍：</h3>
+      <div class="book" v-for="(item, i) in bookList" :key="i">
+        书名：@{{ item.title }} | 作者：@{{ item.author }} | 标签：@{{ item.tag }}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    createApp({
+      data() {
+        return { text: '', emotion: '', bookTag: '', bookList: [] }
+      },
+      methods: {
+        async analyze() {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: this.text })
+          })
+          const data = await res.json()
+          this.emotion = data.emotion
+          this.bookTag = data.book_tag
+          this.bookList = data.books
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
