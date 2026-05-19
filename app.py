@@ -12,7 +12,7 @@ app.config['JSON_AS_ASCII'] = False
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "root",  # 改成你自己的密码
+    "password": "root",
     "database": "novel_db",
     "charset": "utf8mb4"
 }
@@ -28,14 +28,12 @@ model.eval()
 ID2EMO = {0: "中性", 1: "吐槽", 2: "虐点", 3: "爽点"}
 EMO2TAG = {"中性": "中性文", "吐槽": "吐槽文", "虐点": "虐文", "爽点": "爽文"}
 
-# 预测
 def predict_emotion(text):
     inputs = tokenizer(text, return_tensors="pt", max_length=128, padding=True, truncation=True).to(DEVICE)
     with torch.no_grad():
         outputs = model(**inputs)
     return ID2EMO[torch.argmax(outputs.logits, dim=1).item()]
 
-# 查询书籍
 def get_books_by_tag(tag):
     try:
         conn = pymysql.connect(**DB_CONFIG)
@@ -45,58 +43,15 @@ def get_books_by_tag(tag):
         cur.close()
         conn.close()
         return books
-    except:
+    except Exception as e:
+        print(e)
         return []
 
-# 直接返回前端页面（彻底解决 Jinja2 冲突！）
+# 测试根路由，不404
 @app.route('/')
-def index():
-    return '''
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <title>情感分析+书籍推荐</title>
-  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-</head>
-<body>
-  <div id="app">
-    <h2>小说评论情感分析</h2>
-    <textarea v-model="text" rows="6" cols="60"></textarea>
-    <br><br>
-    <button @click="analyze">分析情感</button>
-    <h3>情感结果：{{ emotion }}</h3>
-    <h4>推荐书籍：</h4>
-    <ul>
-      <li v-for="book in books">{{ book.title }} - {{ book.author }} ({{ book.tag }})</li>
-    </ul>
-  </div>
+def home():
+    return "Flask后端运行正常，前端请启动Vue项目"
 
-  <script>
-    const { createApp } = Vue
-    createApp({
-      data() {
-        return { text: "", emotion: "", books: [] }
-      },
-      methods: {
-        async analyze() {
-          const res = await fetch("/api/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: this.text })
-          })
-          const data = await res.json()
-          this.emotion = data.emotion
-          this.books = data.books
-        }
-      }
-    }).mount("#app")
-  </script>
-</body>
-</html>
-    '''
-
-# 接口
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     text = request.json.get("text", "")
